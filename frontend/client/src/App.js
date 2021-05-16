@@ -1,60 +1,57 @@
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import Escrow from './contracts/Escrow.json';
 import { getWeb3 } from './utils.js';
 
-class App extends Component {
-  state = {
-    web3: undefined,
-    accounts: [],
-    currentAccount: undefined,
-    contract: undefined,
-    balance: undefined
-  }
+function App() {
+  const [web3, setWeb3] = useState(undefined);
+  const [accounts, setAccounts] = useState([]);
+  const [currentAccount, setCurrentAccount] = useState(undefined)
+  const [contract, setContract] = useState(undefined)
+  const [balance, setBalance] = useState(undefined)
 
-  async componentDidMount() {
+  useEffect(()=>{
+    initialize()
+  },[])
+
+  async function initialize() {
     const web3 = await getWeb3();
     const accounts = await web3.eth.getAccounts();
-
     const networkId = await web3.eth.net.getId();
     const deployedNetwork = Escrow.networks[networkId];
     const contract = new web3.eth.Contract(
       Escrow.abi,
       deployedNetwork && deployedNetwork.address,
     );
-
-    this.setState({ web3, accounts, contract }, this.updateBalance);
+    setWeb3(web3);
+    setAccounts(accounts);
+    setContract(contract);
+    updateBalance();
   };
 
-  async updateBalance() {
-    const { contract } = this.state;
+  async function updateBalance() {
     const balance = await contract.methods.balanceOf().call();
-    this.setState({ balance });
+    setBalance( balance );
   };
 
-  async deposit(e) {
+  async function deposit(e) {
     e.preventDefault();
-    const { contract, accounts } = this.state;
     await contract.methods.deposit().send({
       from: accounts[0], 
       value: e.target.elements[0].value
     });
-    this.updateBalance();
+    updateBalance();
   }
 
-  async release() {
-    const { contract, accounts } = this.state;
+  async function release() {
     await contract.methods.release().send({
       from: accounts[0], 
     });
-    this.updateBalance();
+    updateBalance();
   }
 
-  render() {
-    if (!this.state.web3) {
+    if (!web3) {
       return <div>Loading...</div>;
     }
-
-    const { balance } = this.state;
 
     return (
       <div className="container">
@@ -68,7 +65,7 @@ class App extends Component {
 
         <div className="row">
           <div className="col-sm-12">
-            <form onSubmit={e => this.deposit(e)}>
+            <form onSubmit={e => deposit(e)}>
               <div className="form-group">
                 <label htmlFor="deposit">Deposit</label>
                 <input type="number" className="form-control" id="deposit" />
@@ -82,13 +79,12 @@ class App extends Component {
 
         <div className="row">
           <div className="col-sm-12">
-             <button onClick={() => this.release()} type="submit" className="btn btn-primary">Release</button>
+             <button onClick={() => release()} type="submit" className="btn btn-primary">Release</button>
           </div>
         </div>
-
       </div>
     );
   }
-}
+
 
 export default App;
